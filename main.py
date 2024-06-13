@@ -3,17 +3,6 @@ import tgcrypto
 import requests
 from pyrogram import Client, filters
 
-# Initialize your Pyrogram client
-api_id = "18979569"
-api_hash = "45db354387b8122bdf6c1b0beef9374"
-bot_token = "7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w"
-
-app = Client("instagram_bot",
-             api_id=api_id,
-             api_hash=api_hash,
-             bot_token=bot_token)
-
-
 # Handler for the /start command
 @app.on_message(filters.command("start"))
 async def start_command(client, message):

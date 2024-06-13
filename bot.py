@@ -25,7 +25,7 @@ class Bot(Client):
         )
 
     async def start(self):
-        print(f"Instagram Downloader Bot with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
+        print(f"Instagram Downloader Bot with for Pyrogram v{__version__} (Layer {layer}) started on @Kuttudownloader_bot.")
         print("Recoded By Goutham SER </>")
         print("THIS IS InsTA VIDEO DOWNLOADER BOT")
 

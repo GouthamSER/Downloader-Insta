@@ -36,7 +36,3 @@ async def private_message(client, message):
 
         except Exception as e:
             await message.reply_text(f"Error: {str(e)}")
-
-
-# Start the bot
-app.run()

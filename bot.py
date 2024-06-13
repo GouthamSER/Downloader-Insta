@@ -29,11 +29,7 @@ class Bot(Client):
         print("Recoded By Goutham SER </>")
         print("THIS IS InsTA VIDEO DOWNLOADER BOT")
 
-        tz = pytz.timezone('Asia/Kolkata')
-        today = date.today()
-        now = datetime.now(tz)
-        time = now.strftime("%H:%M:%S %p")
-        await self.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(today, time))
+
         
         client = webserver.AppRunner(await bot_run())
         await client.setup()

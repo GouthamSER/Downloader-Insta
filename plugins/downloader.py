@@ -1,7 +1,6 @@
-
 import os
 import requests
-from pyrogram import Client, filters
+from pyrogram import Client, filters, InlineKeyboardButton, InlineKeyboardMarkup
 from pytube import YouTube
 import youtube_dl
 
@@ -45,10 +44,12 @@ def download_youtube_mp3(url):
         mp3_path = filename.rsplit('.', 1)[0] + '.mp3'
     return mp3_path
 
+# Start command handler
 @Client.on_message(filters.command(["start"]))
 async def start(bot, message):
     await message.reply("Send me an Instagram video link or a YouTube video link and I will download it for you! You can also specify 'lowest' or 'highest' quality for YouTube videos, or ask to convert to MP3.")
 
+# Handle text messages
 @Client.on_message(filters.text & filters.command)
 async def handle_message(bot, message):
     text = message.text
@@ -60,19 +61,31 @@ async def handle_message(bot, message):
         else:
             await message.reply("Failed to download the Instagram video.")
     elif 'youtube.com' in text or 'youtu.be' in text:
-        parts = text.split()
-        url = parts[0]
-        option = parts[1] if len(parts) > 1 else 'highest'
-        if option == 'mp3':
-            await message.reply("Downloading YouTube video as MP3...")
-            mp3_path = download_youtube_mp3(url)
-            await bot.send_audio(chat_id=message.chat.id, audio=mp3_path)
-            os.remove(mp3_path)
-        else:
-            await message.reply(f"Downloading YouTube video in {option} quality...")
-            video_path = download_youtube_video(url, option)
-            await bot.send_video(chat_id=message.chat.id, video=video_path)
-            os.remove(video_path)
+        buttons = [
+            [
+                InlineKeyboardButton("Download Video", callback_data="download_video"),
+                InlineKeyboardButton("Convert to MP3", callback_data="convert_mp3"),
+            ]
+        ]
+        markup = InlineKeyboardMarkup(buttons)
+        await message.reply("Choose an option:", reply_markup=markup)
     else:
         await message.reply("Please send a valid Instagram or YouTube video link.")
 
+# Callback query handler
+@Client.on_callback_query()
+async def callback_query_handler(bot, query):
+    data = query.data
+    message = query.message
+    url = message.text.split()[0]
+
+    if data == "download_video":
+        await message.edit_text("Downloading YouTube video...")
+        video_path = download_youtube_video(url)
+        await bot.send_video(chat_id=message.chat.id, video=video_path)
+        os.remove(video_path)
+    elif data == "convert_mp3":
+        await message.edit_text("Downloading YouTube video as MP3...")
+        mp3_path = download_youtube_mp3(url)
+        await bot.send_audio(chat_id=message.chat.id, audio=mp3_path)
+        os.remove(mp3_path)

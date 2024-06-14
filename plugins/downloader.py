@@ -49,7 +49,7 @@ def download_youtube_mp3(url):
 async def start(bot, message):
     await message.reply("Send me an Instagram video link or a YouTube video link and I will download it for you! You can also specify 'lowest' or 'highest' quality for YouTube videos, or ask to convert to MP3.")
 
-@Client.on_message(filters.command)
+@Client.on_message(filters.command & filters.text)
 async def handle_message(bot, message):
     text = message.text
     if 'instagram.com' in text:

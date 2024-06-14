@@ -4,3 +4,5 @@ requests
 aiohttp
 datetime
 pytz
+youtube_dl
+pytube

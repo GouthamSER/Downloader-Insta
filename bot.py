@@ -117,10 +117,5 @@ async def private_message(client, message):
 
         except Exception as e:
             await message.reply_text(f"Error: {str(e)}")
-
-#bot run
-if __name__ == "__main__":
-    # Port configuration for running on Render
-    port = int(os.environ.get("PORT", 5000))
-    bot.run(host="0.0.0.0", port=port)
+bot.run()
 

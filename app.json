@@ -12,8 +12,8 @@
       "index",
       "inline"
     ],
-    "website": "https://github.com/GouthamSER/InstaBot",
-    "repository": "https://github.com/GouthamSER/Instabot",
+    "website": "https://github.com/GouthamSER/YTTELE",
+    "repository": "https://github.com/GouthamSER/YTTELE",
     "env": {
         "BOT_TOKEN": {
             "description": "Your bot token.",

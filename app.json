@@ -12,8 +12,8 @@
       "index",
       "inline"
     ],
-    "website": "https://github.com/GouthamSER/YTTELE",
-    "repository": "https://github.com/GouthamSER/YTTELE",
+    "website": "https://github.com/GouthamSER/Downloader-Insta",
+    "repository": "https://github.com/GouthamSER/Downloader-Insta",
     "env": {
         "BOT_TOKEN": {
             "description": "Your bot token.",

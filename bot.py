@@ -3,6 +3,7 @@ import tgcrypto
 from pyrogram import Client, __version__
 from pyrogram.raw.all import layer
 import pytz
+from Script import script
 from os import environ
 from info import API_ID, API_HASH, BOT_TOKEN
 from datetime import date, datetime 
@@ -18,29 +19,6 @@ bot = Client(
 
 
 print("BOT STARTED")
-
-START_TXT = """{} {}
-HI  I am Goutham Ser Bot
-
-This is MAde From Pyrogram and i am studying this language
-
-All CopyRights TO Goutham Josh
- 
-@im_goutham_josh
-"""
-
-HELP_TXT="""
-This is a studiying pyrogram bot
-<u>developed by Profile Photo Ittekunavan</u>
-
-"""
-
-ABOUT_TXT="""
-✯ Cʀᴇᴀᴛᴏʀ: Gᴏᴜᴛʜᴀᴍ Sᴇʀ
-✯ Lɪʙʀᴀʀʏ: Pʏʀᴏɢʀᴀᴍ
-✯ Lᴀɴɢᴜᴀɢᴇ: Pʏᴛʜᴏɴ 3
-✯ Bᴏᴛ Sᴇʀᴠᴇʀ: RAILWAY
-"""
 
 @bot.on_message(filters.command("start"))
 async def start(client, message):
@@ -59,7 +37,7 @@ async def start(client, message):
         get="Good Night"
     
     await message.reply_text(
-        text=START_TXT.format(get,  message.from_user.mention),
+        text=script.START_TXT.format(get,  message.from_user.mention),
         reply_markup=InlineKeyboardMarkup(button)
     )
 
@@ -68,7 +46,7 @@ async def start(client, msg):
     
     if msg.data == "start":
         await msg.message.edit(
-            text=START_TXT.format(get,  message.from_user.mention),
+            text=script.START_TXT.format(get,  message.from_user.mention),
             reply_markup=InlineKeyboardMarkup(
             [[
                 InlineKeyboardButton("Help✨", callback_data="help"),
@@ -79,7 +57,7 @@ async def start(client, msg):
 
     elif msg.data == "help":
         await msg.message.edit(
-            text=HELP_TXT,
+            text=script.HELP_TXT,
             reply_markup=InlineKeyboardMarkup(
             [[
                 InlineKeyboardButton("Back", callback_data="start")
@@ -88,7 +66,7 @@ async def start(client, msg):
         )
     elif msg.data == "about":
         await msg.message.edit(
-            text=ABOUT_TXT,
+            text=script.ABOUT_TXT,
             reply_markup=InlineKeyboardMarkup(
             [[
                 InlineKeyboardButton('Back', callback_data="start")
@@ -100,27 +78,17 @@ async def start(client, msg):
 @bot.on_message(filters.command("help"))
 async def help(client, message):
     await message.reply_text(
-        text=HELP_TXT
+        text=script.HELP_TXT
     )
     
 @bot.on_message(filters.command("about"))
 async def about(client, message):
     await message.reply_text(
-        text=ABOUT_TXT
+        text=script.ABOUT_TXT
     )
-    
-@bot.on_message(filters.command("id"))
-async def idgroup(client, msg):
-    text=f"""
-    Title : {msg.chat.title}
-User Name : <code> @{msg.from_user.username} </code>
-Your ID : <code> {msg.from_user.id} </code>
-Group ID : <code> {msg.chat.id} </code>
-"""
-    await msg.reply_text(text=text)
 
 
-@app.on_message(filters.command("start"))
+@bot.on_message(filters.command("insta"))
 async def start_command(client, message):
     await message.reply_text("Welcome! Send me an Instagram video link and I'll download and send it back to you.")
 

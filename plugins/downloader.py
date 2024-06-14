@@ -76,4 +76,3 @@ async def handle_message(bot, message):
     else:
         await message.reply("Please send a valid Instagram or YouTube video link.")
 
-app.run()

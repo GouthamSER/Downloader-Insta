@@ -1,56 +1,51 @@
-from aiohttp import web as webserver
-from plugins.webcode import bot_run
 import tgcrypto
-from pyrogram import Client, __version__, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from pyrogram.raw.all import layer
-import pytz
-from Script import script
-from os import environ
-from info import API_ID, API_HASH, BOT_TOKEN
-from datetime import date, datetime 
+import os
+import instaloader
+from pyrogram import Client, filters
 
-PORT_CODE = environ.get("PORT", "8080")
+# Initialize Instaloader
+L = instaloader.Instaloader()
 
-class Bot(Client):
+# Initialize the bot with your Telegram bot token
+app = Client("insta_reel_downloader_bot", bot_token="7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w")
 
-    def __init__(self):
-        super().__init__(
-            name="InstaBOT",
-            api_id=API_ID,
-            api_hash=API_HASH,
-            bot_token=BOT_TOKEN,
-            workers=50,
-            plugins={"root": "plugins"},
-            sleep_threshold=5,
-        )
+# Function to download Instagram Reels video
+def download_instagram_reel(url):
+    try:
+        post = instaloader.Post.from_shortcode(L.context, url.split("/")[-2])
+        if post.typename == "GraphVideo":  # Check if the post is a video (Reel)
+            L.download_post(post, target="downloads")
+            for file in os.listdir("downloads"):
+                if file.endswith(".mp4"):
+                    return os.path.join("downloads", file)
+        else:
+            return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
 
-    async def start(self):
-        await super().start()
-        me = await self.get_me()
-        self.username = '@' + me.username
-        print(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
-        print("Recoded By Goutham SER </>")
+# Handler for /start command
+@app.on_message(filters.command("start"))
+def start(client, message):
+    message.reply_text("Hello! Send me an Instagram Reels link, and I'll download it for you.")
 
-        tz = pytz.timezone('Asia/Kolkata')
-        today = date.today()
-        now = datetime.now(tz)
-        time = now.strftime("%H:%M:%S %p")
-        print(today, time)
-        #await self.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(today, time))
-        
-        client = webserver.AppRunner(await bot_run())
-        await client.setup()
-        bind_address = "0.0.0.0"
-        await webserver.TCPSite(client, bind_address,
-        PORT_CODE).start()
-        
-        
+# Handler for messages containing Instagram Reels links
+@app.on_message(filters.text & filters.private)
+def download_reel(client, message):
+    url = message.text
+    if "instagram.com/reel" in url:
+        message.reply_text("Downloading the Reels video, please wait...")
+        video_path = download_instagram_reel(url)
+        if video_path:
+            message.reply_video(video_path)
+            # Clean up downloaded file
+            os.remove(video_path)
+        else:
+            message.reply_text("Failed to download the Reels video. Please check the link and try again.")
+    else:
+        message.reply_text("Please send a valid Instagram Reels link.")
 
-    async def stop(self, *args):
-        await super().stop()
-        print("Bot stopped. Bye.")
-
-
-app = Bot()
-app.run()
+if __name__ == "__main__":
+    if not os.path.exists("downloads"):
+        os.makedirs("downloads")
+    app.run()

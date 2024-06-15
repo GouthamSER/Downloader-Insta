@@ -1,6 +1,7 @@
 import os
 import instaloader
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 
 # Telegram API credentials
@@ -49,11 +50,11 @@ def download_youtube_video(url, download_audio=False):
 # Handler for /start command
 @app.on_message(filters.command("start"))
 def start(client, message):
-    message.reply_text("Hello! Send me an Instagram Reels or post link, or a YouTube video link, and I'll download it for you. For YouTube, specify if you want 'video' or 'mp3'.")
+    message.reply_text("Hello! Send me an Instagram Reels or post link, or a YouTube video link, and I'll download it for you. For YouTube, you'll get an option to choose 'video' or 'mp3'.")
 
-# Handler for messages containing links
+# Handler for messages containing Instagram links
 @app.on_message(filters.text & filters.private)
-def download_content(client, message):
+def handle_links(client, message):
     url = message.text
     if "instagram.com/reel" in url or "instagram.com/p" in url:
         message.reply_text("Downloading the Instagram content, please wait...")
@@ -68,27 +69,39 @@ def download_content(client, message):
         else:
             message.reply_text("Failed to download the Instagram content. Please check the link and try again.")
     elif "youtube.com" in url or "youtu.be" in url:
-        message.reply_text("Do you want to download this as 'video' or 'mp3'?")
-        client.listen(filters.reply & filters.private)
-        response = client.listen(filters.reply & filters.private)
-        if response.text.lower() == 'video':
-            message.reply_text("Downloading the YouTube video, please wait...")
-            file = download_youtube_video(url, download_audio=False)
-            if file:
-                message.reply_video(file)
-                os.remove(file)  # Clean up downloaded file
-            else:
-                message.reply_text("Failed to download the YouTube video. Please check the link and try again.")
-        elif response.text.lower() == 'mp3':
-            message.reply_text("Downloading the YouTube audio, please wait...")
-            file = download_youtube_video(url, download_audio=True)
-            if file:
-                message.reply_audio(file)
-                os.remove(file)  # Clean up downloaded file
-            else:
-                message.reply_text("Failed to download the YouTube audio. Please check the link and try again.")
+        buttons = [
+            [
+                InlineKeyboardButton("Download Video", callback_data=f"video|{url}"),
+                InlineKeyboardButton("Download MP3", callback_data=f"mp3|{url}")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(buttons)
+        message.reply_text("Choose the format to download:", reply_markup=reply_markup)
     else:
         message.reply_text("Please send a valid Instagram Reels, post link, or YouTube link.")
+
+# Handler for callback queries
+@app.on_callback_query()
+def callback_query_handler(client, callback_query):
+    data = callback_query.data
+    action, url = data.split('|')
+
+    if action == "video":
+        callback_query.message.reply_text("Downloading the YouTube video, please wait...")
+        file = download_youtube_video(url, download_audio=False)
+        if file:
+            callback_query.message.reply_video(file)
+            os.remove(file)  # Clean up downloaded file
+        else:
+            callback_query.message.reply_text("Failed to download the YouTube video. Please check the link and try again.")
+    elif action == "mp3":
+        callback_query.message.reply_text("Downloading the YouTube audio, please wait...")
+        file = download_youtube_video(url, download_audio=True)
+        if file:
+            callback_query.message.reply_audio(file)
+            os.remove(file)  # Clean up downloaded file
+        else:
+            callback_query.message.reply_text("Failed to download the YouTube audio. Please check the link and try again.")
 
 if __name__ == "__main__":
     if not os.path.exists("downloads"):

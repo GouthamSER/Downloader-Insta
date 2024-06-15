@@ -12,7 +12,7 @@ BOT_TOKEN = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
 app = Client("downloader_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # Function to download YouTube video
-def download_youtube_video(url, resolution=None):
+async def download_youtube_video(url, resolution=None):
     try:
         yt = YouTube(url)
         if resolution:
@@ -25,7 +25,7 @@ def download_youtube_video(url, resolution=None):
         return None
 
 # Function to convert YouTube video to MP3
-def convert_to_mp3(url):
+async def convert_to_mp3(url):
     try:
         yt = YouTube(url)
         stream = yt.streams.filter(only_audio=True).first()
@@ -40,12 +40,12 @@ def convert_to_mp3(url):
 
 # Handler for /start command
 @app.on_message(filters.command("start"))
-def start(client, message):
+async def start(client, message):
     message.reply_text("Hello! Send me a YouTube video link, and I'll give you options to download it as video or MP3.")
 
 # Handler for messages containing YouTube links
 @app.on_message(filters.text & filters.private)
-def handle_youtube_link(client, message):
+async def handle_youtube_link(client, message):
     url = message.text
     if "youtube.com" in url or "youtu.be" in url:
         buttons = [
@@ -59,7 +59,7 @@ def handle_youtube_link(client, message):
 
 # Handler for callback queries
 @app.on_callback_query()
-def callback_query_handler(client, callback_query):
+async def callback_query_handler(client, callback_query):
     data = callback_query.data
     action, url = data.split('|')[0], '|'.join(data.split('|')[1:])  # Reconstruct the URL part
 

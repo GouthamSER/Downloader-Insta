@@ -1,4 +1,5 @@
 import os
+import tgcrypto
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pytube import YouTube

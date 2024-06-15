@@ -12,7 +12,7 @@ BOT_TOKEN = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
 app = Client("downloader_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # Function to download YouTube video or audio
-def download_youtube(url, resolution=None, download_audio=False):
+def download_youtube(url, itag=None, download_audio=False):
     try:
         yt = YouTube(url)
         if download_audio:
@@ -23,8 +23,8 @@ def download_youtube(url, resolution=None, download_audio=False):
             os.rename(output, new_file)
             return new_file
         else:
-            if resolution:
-                stream = yt.streams.filter(res=resolution).first()
+            if itag:
+                stream = yt.streams.get_by_itag(itag)
             else:
                 stream = yt.streams.get_highest_resolution()
             return stream.download(output_path="downloads")
@@ -55,34 +55,48 @@ def handle_youtube_link(client, message):
 @app.on_callback_query()
 def callback_query_handler(client, callback_query):
     data = callback_query.data
-    action, url = data.split('|')
+    action = data.split('|')[0]
+    url = '|'.join(data.split('|')[1:])  # Reconstruct the URL part
 
     if action == "video":
         yt = YouTube(url)
-        buttons = [
-            [InlineKeyboardButton(stream.resolution, callback_data=f"res|{stream.itag}|{url}") for stream in yt.streams.filter(progressive=True)]
-        ]
+        buttons = []
+        for stream in yt.streams.filter(progressive=True, file_extension='mp4'):
+            buttons.append([InlineKeyboardButton(f"{stream.resolution} - {stream.fps}fps", callback_data=f"res|{stream.itag}|{url}")])
         reply_markup = InlineKeyboardMarkup(buttons)
         callback_query.message.reply_text("Choose the resolution to download:", reply_markup=reply_markup)
     elif action == "mp3":
-        callback_query.message.reply_text("Downloading the YouTube audio, please wait...")
-        file = download_youtube(url, download_audio=True)
-        if file:
-            callback_query.message.reply_audio(file)
-            os.remove(file)  # Clean up downloaded file
-        else:
-            callback_query.message.reply_text("Failed to download the YouTube audio. Please check the link and try again.")
+        yt = YouTube(url)
+        buttons = [
+            [InlineKeyboardButton("High Quality", callback_data=f"mp3_high|{url}")],
+            [InlineKeyboardButton("Medium Quality", callback_data=f"mp3_medium|{url}")],
+            [InlineKeyboardButton("Low Quality", callback_data=f"mp3_low|{url}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(buttons)
+        callback_query.message.reply_text("Choose the MP3 quality to download:", reply_markup=reply_markup)
     elif action.startswith("res"):
         _, itag, url = action.split('|')
         callback_query.message.reply_text("Downloading the YouTube video, please wait...")
-        yt = YouTube(url)
-        stream = yt.streams.get_by_itag(itag)
-        file = stream.download(output_path="downloads")
+        file = download_youtube(url, itag=itag)
         if file:
             callback_query.message.reply_video(file)
             os.remove(file)  # Clean up downloaded file
         else:
             callback_query.message.reply_text("Failed to download the YouTube video. Please check the link and try again.")
+    elif action.startswith("mp3"):
+        quality = action.split('_')[1]
+        callback_query.message.reply_text(f"Downloading the YouTube audio in {quality} quality, please wait...")
+        if quality == 'high':
+            file = download_youtube(url, download_audio=True)
+        elif quality == 'medium':
+            file = download_youtube(url, download_audio=True)  # Here you can add logic to convert to medium quality if needed
+        elif quality == 'low':
+            file = download_youtube(url, download_audio=True)  # Here you can add logic to convert to low quality if needed
+        if file:
+            callback_query.message.reply_audio(file)
+            os.remove(file)  # Clean up downloaded file
+        else:
+            callback_query.message.reply_text("Failed to download the YouTube audio. Please check the link and try again.")
 
 if __name__ == "__main__":
     if not os.path.exists("downloads"):

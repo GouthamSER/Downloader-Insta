@@ -1,13 +1,17 @@
-import tgcrypto
 import os
 import instaloader
 from pyrogram import Client, filters
 
+# Telegram API credentials
+API_ID = '18979569'
+API_HASH = '45db354387b8122bdf6c1b0beef93743'
+BOT_TOKEN = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
+
 # Initialize Instaloader
 L = instaloader.Instaloader()
 
-# Initialize the bot with your Telegram bot token
-app = Client("insta_reel_downloader_bot", bot_token="7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w")
+# Initialize the bot with your Telegram API credentials and bot token
+app = Client("insta_reel_downloader_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # Function to download Instagram Reels video
 def download_instagram_reel(url):

@@ -1,5 +1,6 @@
 pyrogram
 tgcrypto
 instaloader
-
+aiomultiprocess
 pytube
+pydub

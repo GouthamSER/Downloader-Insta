@@ -1,160 +1,89 @@
 import os
-
+import logging
 import asyncio
-
 from pyrogram import Client, filters
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyClientCredentials
+import youtube_dl
 
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
-from pytube import YouTube
-
-import instaloader
-
-from pydub import AudioSegment
-
-from aiomultiprocess import Pool
-
-
-
-# Initialize Telegram Bot
-
+# Replace these with your own values
 api_id = '18979569'
-
 api_hash = '45db354387b8122bdf6c1b0beef93743'
-
 bot_token = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
+spotify_client_id = 'e3023850cb7b45f1b0c500187afb942d'
+spotify_client_secret = 'face7ba8168a4d8cae483c87dc37f7af'
+
+# Initialize the bot
+app = Client("my_spotify_bot",
+             api_id=api_id,
+             api_hash=api_hash,
+             bot_token=bot_token)
+
+# Initialize Spotify client
+spotify = Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=spotify_client_id, client_secret=spotify_client_secret))
 
 
+# Function to download song as MP3
+async def download_song(query):
+    ydl_opts = {
+        'format':
+        'bestaudio/best',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'outtmpl':
+        'downloads/%(title)s.%(ext)s',
+        'quiet':
+        True,
+    }
 
-app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(f"ytsearch:{query}", download=True)
+        file_name = ydl.prepare_filename(info_dict)
+        return file_name.replace(".webm", ".mp3").replace(".m4a", ".mp3")
 
-
-
-# Asynchronously Download and Convert YouTube Video or MP3
-
-async def download_youtube(url, download_type):
-
-    yt = YouTube(url)
-
-    if download_type == 'video':
-
-        stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-
-        file_path = stream.download()
-
-    elif download_type == 'mp3':
-
-        stream = yt.streams.filter(only_audio=True).first()
-
-        file_path = stream.download()
-
-        audio = AudioSegment.from_file(file_path)
-
-        mp3_path = file_path.replace('.mp4', '.mp3')
-
-        audio.export(mp3_path, format='mp3')
-
-        os.remove(file_path)
-
-        file_path = mp3_path
-
-    return file_path
-
-
-
-# Asynchronously Download Instagram Content
-
-async def download_instagram(url):
-
-    loader = instaloader.Instaloader()
-
-    post = instaloader.Post.from_shortcode(loader.context, url.split("/")[-2])
-
-    if post.typename == "GraphVideo":
-
-        loader.download_post(post, target="downloads")
-
-    else:
-
-        loader.download_post(post, target="downloads")
-
-    return "downloads"
-
-
-
-# Start Command
 
 @app.on_message(filters.command("start"))
-
 async def start(client, message):
+    await message.reply(
+        "Hello! Send me a Spotify link and I'll download the song for you as an MP3!"
+    )
 
-    await message.reply("Welcome! Send me a YouTube or Instagram link.")
 
-
-
-# YouTube Link Handler
-
-@app.on_message(filters.regex(r'^(https?\:\/\/)?(www\.youtube\.com|youtu\.?be)\/.+$'))
-
-async def youtube_handler(client, message):
-
+@app.on_message(
+    filters.regex(
+        r'^(https?://)?(www\.)?(open\.spotify\.com)/track/[a-zA-Z0-9]+$'))
+async def spotify_handler(client, message):
     url = message.text
+    await message.reply("Processing the Spotify link...")
 
-    buttons = [
+    # Extract track info
+    track_id = url.split("/")[-1].split("?")[0]
+    track = spotify.track(track_id)
+    track_name = track['name']
+    track_artists = ", ".join(artist['name'] for artist in track['artists'])
+    search_query = f"{track_name} {track_artists}"
 
-        [InlineKeyboardButton("Download Video", callback_data=f"yt_video|{url}"),
+    await message.reply(f"Downloading {track_name} by {track_artists}...")
 
-         InlineKeyboardButton("Download MP3", callback_data=f"yt_mp3|{url}")]
+    # Download song
+    mp3_file = await download_song(search_query)
 
-    ]
-
-    await message.reply("Choose download type:", reply_markup=InlineKeyboardMarkup(buttons))
-
-
-
-# Instagram Link Handler
-
-@app.on_message(filters.regex(r'^(https?\:\/\/)?(www\.instagram\.com)\/.+$'))
-
-async def instagram_handler(client, message):
-
-    url = message.text
-
-    async with Pool() as pool:
-
-        file_path = await pool.apply(download_instagram, (url,))
-
-    await message.reply_document(document=file_path)
-
-
-
-# Callback Query Handler
-
-@app.on_callback_query()
-
-async def callback_query_handler(client, callback_query):
-
-    data = callback_query.data
-
-    download_type, url = data.split('|')
-
-    chat_id = callback_query.message.chat.id
-
-
-
-    async with Pool() as pool:
-
-        file_path = await pool.apply(download_youtube, (url, download_type))
-
-
-
-    await client.send_document(chat_id, file_path)
-
-    os.remove(file_path)
-
+    if mp3_file:
+        await client.send_audio(message.chat.id, audio=mp3_file)
+        await message.reply("Download complete!")
+    else:
+        await message.reply(
+            "Failed to download the song. Please try again later.")
 
 
 if __name__ == "__main__":
-
+    if not os.path.exists('downloads'):
+        os.makedirs('downloads')
     app.run()
-

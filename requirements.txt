@@ -1,6 +1,4 @@
 pyrogram
 tgcrypto
-instaloader
-aiomultiprocess
-pytube
-pydub
+spotipy
+youtube-dl

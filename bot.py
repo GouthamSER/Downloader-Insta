@@ -3,7 +3,6 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 import yt_dlp
-import bot2
 
 # Define API credentials
 api_id = '18979569'
@@ -52,6 +51,31 @@ async def download_audio(url):
     loop = asyncio.get_event_loop()
     audio_path = await loop.run_in_executor(None, lambda: yt_dlp.download(url, format="bestaudio"))
     return audio_path
+
+def download_video(url, format="mp4"):
+    ydl_opts = {
+        'format': format,
+        'outtmpl': '%(title)s.%(ext)s'
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info)
+
+def download_audio(url, format="bestaudio"):
+    ydl_opts = {
+        'format': format,
+        'outtmpl': '%(title)s.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info)
+
+
 
 if __name__ == "__main__":
     app.run()

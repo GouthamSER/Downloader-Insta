@@ -1,3 +1,3 @@
-pyrogram
+pyrogram>=2.0.59
 tgcrypto
-instaloader
+youtube_dl

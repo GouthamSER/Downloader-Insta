@@ -5,9 +5,9 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 import yt_dlp
 
 # Define API credentials
-api_id = '18979569'
-api_hash = '45db354387b8122bdf6c1b0beef93743'
-bot_token = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
+API_ID = '18979569'
+API_HASH = '45db354387b8122bdf6c1b0beef93743'
+BOT_TOKEN = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
 
 app = Client("youtube_downloader_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 

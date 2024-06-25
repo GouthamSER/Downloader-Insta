@@ -1,84 +1,80 @@
 import os
-import logging
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-import youtube_dl
-import shutil
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+import yt_dlp
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-
-# Replace these with your own values
+# Define API credentials
 api_id = '18979569'
 api_hash = '45db354387b8122bdf6c1b0beef93743'
 bot_token = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
 
-# Initialize the bot
-app = Client("my_youtube_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+app = Client("youtube_downloader_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Function to download video or audio
-async def download_youtube_content(url, content_type):
-    download_path = f"downloads/{int(asyncio.time())}"
-    os.makedirs(download_path, exist_ok=True)
-    
+def download_video(url, format="mp4"):
     ydl_opts = {
-        'format': 'bestaudio/best' if content_type == 'audio' else 'best',
+        'format': format,
+        'outtmpl': '%(title)s.%(ext)s'
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info)
+
+def download_audio(url, format="bestaudio"):
+    ydl_opts = {
+        'format': format,
+        'outtmpl': '%(title)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
-        }] if content_type == 'audio' else [],
-        'outtmpl': f'{download_path}/%(title)s.%(ext)s',
-        'quiet': True,
+        }],
     }
-    
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        return download_path
-    except Exception as e:
-        logging.error(f"Error downloading content: {e}")
-        return None
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return ydl.prepare_filename(info)
 
-@app.on_message(filters.command("start"))
+
+@app.on_message(filters.command(["start"]))
 async def start(client, message):
-    await message.reply("Hello! Send me a YouTube link and choose whether to download it as video or audio!")
+    await message.reply_text("Hello! Send me a YouTube link to download the video or audio.")
 
-@app.on_message(filters.regex(r'^https?://(www\.)?(youtube\.com|youtu\.be)/.+$'))
-async def youtube_handler(client, message):
+@app.on_message(filters.text & ~filters.private)
+async def download(client, message):
     url = message.text
-    await message.reply("What would you like to download?\n\n1. Video\n2. Audio", 
-                        reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("Video", callback_data=f"video|{url}")],
-                            [InlineKeyboardButton("Audio", callback_data=f"audio|{url}")]
-                        ]))
+    buttons = [
+        [InlineKeyboardButton("Download Video", callback_data=f"video|{url}"),
+         InlineKeyboardButton("Download Audio", callback_data=f"audio|{url}")]
+    ]
+    await message.reply_text("Choose format:", reply_markup=InlineKeyboardMarkup(buttons))
 
 @app.on_callback_query()
 async def callback_query_handler(client, callback_query):
-    data = callback_query.data.split("|")
-    content_type = data[0]
-    url = data[1]
+    data = callback_query.data
+    choice, url = data.split("|")
 
-    await callback_query.message.edit_text(f"Downloading the {content_type}...")
+    if choice == "video":
+        await callback_query.message.reply_text("Downloading video...")
+        video_path = await download_video(url)
+        await client.send_video(callback_query.message.chat.id, video_path)
+        os.remove(video_path)
+    elif choice == "audio":
+        await callback_query.message.reply_text("Downloading audio...")
+        audio_path = await download_audio(url)
+        await client.send_audio(callback_query.message.chat.id, audio_path)
+        os.remove(audio_path)
 
-    download_path = await download_youtube_content(url, content_type)
-    if download_path:
-        for root, _, files in os.walk(download_path):
-            for file_name in files:
-                file_path = os.path.join(root, file_name)
-                if os.path.isfile(file_path):
-                    await client.send_document(callback_query.message.chat.id, file_path)
-        
-        await callback_query.message.edit_text("Download complete! The files will be deleted in 5 minutes.")
-        
-        # Schedule deletion of the temporary directory
-        await asyncio.sleep(300)
-        shutil.rmtree(download_path, ignore_errors=True)
-    else:
-        await callback_query.message.edit_text("Failed to download the content. Please check the URL and try again.")
+    await callback_query.answer()
+
+async def download_video(url):
+    loop = asyncio.get_event_loop()
+    video_path = await loop.run_in_executor(None, lambda: yt_dlp.download(url, format="mp4"))
+    return video_path
+
+async def download_audio(url):
+    loop = asyncio.get_event_loop()
+    audio_path = await loop.run_in_executor(None, lambda: yt_dlp.download(url, format="bestaudio"))
+    return audio_path
 
 if __name__ == "__main__":
-    if not os.path.exists('downloads'):
-        os.makedirs('downloads')
     app.run()

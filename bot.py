@@ -2,9 +2,9 @@ import os
 import logging
 import asyncio
 from pyrogram import Client, filters
-from spotipy import Spotify
-from spotipy.oauth2 import SpotifyClientCredentials
-import youtube_dl
+import instaloader
+from instaloader import Profile
+import shutil
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -13,59 +13,58 @@ logging.basicConfig(level=logging.INFO)
 api_id = '18979569'
 api_hash = '45db354387b8122bdf6c1b0beef93743'
 bot_token = '7195222206:AAGsp4RstBtnChHAx_aQNNV-PJ6_cQEE54w'
-spotify_client_id = 'e3023850cb7b45f1b0c500187afb942d'
-spotify_client_secret = 'face7ba8168a4d8cae483c87dc37f7af'
 
 # Initialize the bot
-app = Client("my_spotify_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+app = Client("my_instagram_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-# Initialize Spotify client
-spotify = Spotify(auth_manager=SpotifyClientCredentials(client_id=spotify_client_id, client_secret=spotify_client_secret))
+# Initialize Instaloader
+loader = instaloader.Instaloader()
 
-# Function to download song as MP3
-async def download_song(query):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
-        'quiet': True,
-    }
+async def download_instagram_content(url):
+    download_path = f"downloads/{int(asyncio.time())}"
+    os.makedirs(download_path, exist_ok=True)
     
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(f"ytsearch:{query}", download=True)
-        file_name = ydl.prepare_filename(info_dict)
-        return file_name.replace(".webm", ".mp3").replace(".m4a", ".mp3")
+    try:
+        if "/p/" in url or "/reel/" in url:
+            post = instaloader.Post.from_shortcode(loader.context, url.split("/")[-2])
+            loader.download_post(post, target=download_path)
+        elif "/stories/" in url:
+            username = url.split("/")[-2]
+            profile = Profile.from_username(loader.context, username)
+            for story in loader.get_stories(userids=[profile.userid]):
+                for item in story.get_items():
+                    loader.download_storyitem(item, target=f"{download_path}/{username}_stories")
+        else:
+            raise ValueError("Unsupported URL")
+        return download_path
+    except Exception as e:
+        logging.error(f"Error downloading content: {e}")
+        return None
 
 @app.on_message(filters.command("start"))
 async def start(client, message):
-    await message.reply("Hello! Send me a Spotify link and I'll download the song for you as an MP3!")
+    await message.reply("Hello! Send me an Instagram reel, post, or story link, and I'll download it for you!")
 
-@app.on_message(filters.regex(r'^(https?://)?(www\.)?(open\.spotify\.com)/track/[a-zA-Z0-9]+$'))
-async def spotify_handler(client, message):
+@app.on_message(filters.regex(r'^(https?://)?(www\.)?(instagram\.com|instagr\.am)/(p|reel|stories)/[a-zA-Z0-9_-]+/?$'))
+async def instagram_handler(client, message):
     url = message.text
-    await message.reply("Processing the Spotify link...")
+    await message.reply("Downloading the Instagram content...")
 
-    # Extract track info
-    track_id = url.split("/")[-1].split("?")[0]
-    track = spotify.track(track_id)
-    track_name = track['name']
-    track_artists = ", ".join(artist['name'] for artist in track['artists'])
-    search_query = f"{track_name} {track_artists}"
-
-    await message.reply(f"Downloading {track_name} by {track_artists}...")
-
-    # Download song
-    mp3_file = await download_song(search_query)
-    
-    if mp3_file:
-        await client.send_audio(message.chat.id, audio=mp3_file)
-        await message.reply("Download complete!")
+    download_path = await download_instagram_content(url)
+    if download_path:
+        for root, _, files in os.walk(download_path):
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                if os.path.isfile(file_path):
+                    await client.send_document(message.chat.id, file_path)
+        
+        await message.reply("Download complete! The files will be deleted in 5 minutes.")
+        
+        # Schedule deletion of the temporary directory
+        await asyncio.sleep(300)
+        shutil.rmtree(download_path, ignore_errors=True)
     else:
-        await message.reply("Failed to download the song. Please try again later.")
+        await message.reply("Failed to download the content. Please check the URL and try again.")
 
 if __name__ == "__main__":
     if not os.path.exists('downloads'):
